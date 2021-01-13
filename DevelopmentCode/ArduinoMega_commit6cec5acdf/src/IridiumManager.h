@@ -67,6 +67,11 @@ private:
     void set_battery_message(void);
 
     /*
+      Append the buffer_transmit_packet with the temperature value
+    */
+    void set_temperature_message(void);
+
+    /*
       Append the buffer_transmit_packet with the current filename
     */
     void set_filename_message(void);

@@ -45,6 +45,17 @@
 #include "VN100Manager.h"
 #include "RaspberryManager.h"
 
+//////////////////////////////////////////////
+#include <Arduino.h>
+#include <Wire.h>
+#include "TSYS01.h"
+TSYS01 SensorT;
+
+float T1;
+int count_ave = 0;
+
+//////////////////////////////////////////////
+
 // board manager
 BoardManager board_manager{};
 
@@ -95,6 +106,14 @@ void setup(){
   // raspberry Pi
   // will be started when needed
 
+///////////////////////////////////////////////////
+
+  Wire.begin();
+  SensorT.init();
+  pinMode(2, OUTPUT);
+
+///////////////////////////////////////////////////
+
   // start logging!
   board_manager.start_logging(DURATION_LOGGING_MS);
 }
@@ -118,6 +137,52 @@ void loop(){
     case BOARD_DONE_LOGGING:
       // close SD card
       sd_manager.close_datafile();
+
+ ////////////////
+      digitalWrite(2, HIGH);
+      delay(200);
+      digitalWrite(2,LOW);
+
+      File dataFile;
+      dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
+      dataFile.println("start");
+
+      SensorT.init();
+      while (count_ave < 5) {
+      SensorT.read();
+      dataFile.print(millis());
+      dataFile.print(",");
+      dataFile.println(SensorT.temperature());
+      T1=SensorT.temperature();
+      delay(1000);
+      count_ave++;
+      }
+      T1=SensorT.temperature();
+      
+      long value_fileIndex = EEPROMReadlong(1);
+      if (value_fileIndex<10){
+        dataFile.print("F0000");
+        dataFile.println(value_fileIndex);
+      }
+      else if (value_fileIndex<100){
+        dataFile.print("F000");
+        dataFile.println(value_fileIndex);
+      }
+      else if (value_fileIndex<1000){
+        dataFile.print("F00");
+        dataFile.println(value_fileIndex);
+      }
+      else if (value_fileIndex<1000){
+        dataFile.print("F0");
+        dataFile.println(value_fileIndex);
+      }
+      else {
+        dataFile.print("F");
+        dataFile.println(value_fileIndex);
+      }
+      dataFile.close();
+
+ ////////////////
 
       // go through Iridium vital messages
       iridium_manager.send_receive_iridium_vital_information();

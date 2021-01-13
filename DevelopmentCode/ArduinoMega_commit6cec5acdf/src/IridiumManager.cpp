@@ -95,6 +95,7 @@ void IridiumManager::send_receive_iridium_vital_information(void)
     // TODO: check that ok length for buffer
     // add the information
     IridiumManager::set_battery_message();
+    IridiumManager::set_temperature_message();
     IridiumManager::set_filename_message();
     IridiumManager::set_GPRMC_message();
 
@@ -123,6 +124,26 @@ void IridiumManager::set_battery_message(void){
         buffer_transmit_position += 1;
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+void IridiumManager::set_temperature_message(void){
+    PDEBMSG("call IridiumManager::set_temperature_message")
+
+    // get the message
+    extern float T1;
+    String temperature_string = String{T1};
+
+    // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+    // add it to the buffer_transmit and update buffer_transmit_position
+    for (int i=0; i < temperature_string.length() + 1; i++){  // because need the first digit and dot
+        buffer_transmit[buffer_transmit_position] = temperature_string[i];
+        buffer_transmit_position += 1;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
 
 void IridiumManager::set_filename_message(void){
     PDEBMSG("call IridiumManager::set_filename_message")
