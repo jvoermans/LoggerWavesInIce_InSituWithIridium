@@ -276,7 +276,7 @@ void loop() {
 
       detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
-      ////////////////
+      //////////////////
 
       // go through Iridium vital messages
       iridium_manager.send_receive_iridium_vital_information();

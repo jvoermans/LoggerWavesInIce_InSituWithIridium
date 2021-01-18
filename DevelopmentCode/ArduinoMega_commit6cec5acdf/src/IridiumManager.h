@@ -67,9 +67,15 @@ private:
     void set_battery_message(void);
 
     /*
-      Append the buffer_transmit_packet with the temperature value
+      Append the buffer_transmit_packet with the environmental sensor value
     */
-    void set_temperature_message(void);
+    void set_temperature1_message(void);
+    void set_temperature2_message(void);
+    void set_temperature3_message(void);
+    void set_pressure_message(void);
+//    void set_sensors_message(void);
+//    void set_wind_message(void);
+//    void set_sonar_message(void);
 
     /*
       Append the buffer_transmit_packet with the current filename
