@@ -46,13 +46,42 @@
 #include "RaspberryManager.h"
 
 //////////////////////////////////////////////
+// General
 #include <Arduino.h>
 #include <Wire.h>
-#include "TSYS01.h"
-TSYS01 SensorT;
+uint32_t timer = millis();
+int count = 0; //define counter
 
+static const uint8_t Pin_reset = 3; //TCA9548A reset pin
+const int count_nr = 30; //Number of sensor measurements
+
+// Temperature sensors
+#include "TSYS01.h"
+TSYS01 sensor;
 float T1;
-int count_ave = 0;
+float T2;
+float T3;
+float T1_ave = 0;
+float T2_ave = 0;
+float T3_ave = 0;
+int T1_count = 0;
+int T2_count = 0;
+int T3_count = 0;
+
+// Pressure sensor
+#include <Adafruit_LPS35HW.h>
+Adafruit_LPS35HW LPS35HW = Adafruit_LPS35HW();
+float P1;
+float P1_ave;
+int P1_count;
+
+// Wind anemometer
+#define WindSensorPin (2) //define pin of wind sensor
+uint32_t time1; //define start of measurement
+uint32_t time2; //define end of measurement
+volatile unsigned long Rotations; //measurement of nr of anemometer rotations
+volatile unsigned long ContactBounceTime;
+float WindSpeed; //Wind speed measurement
 
 //////////////////////////////////////////////
 
@@ -79,13 +108,13 @@ RaspberryManager raspberry_manager{&board_manager, &sd_manager, &iridium_manager
 // TODO: not urgent: class for the LSM9DS0
 // TODO: fix all names: name cpp file and header should be the same as class they contain
 
-void setup(){
+void setup() {
 
   // manage the board: decide if should wake up
-   board_manager.start();
-   wdt_reset();
+  board_manager.start();
+  wdt_reset();
 
-   print_debug_status();
+  print_debug_status();
 
   // make SD card ready
   sd_manager.start_sd();
@@ -106,30 +135,39 @@ void setup(){
   // raspberry Pi
   // will be started when needed
 
-///////////////////////////////////////////////////
+  ///////////////////////////////////////////////////
 
   Wire.begin();
-  SensorT.init();
-  pinMode(2, OUTPUT);
+  Wire.setClock(10000);
+  Wire.setWireTimeout(10000, true);
+  pinMode(Pin_reset, OUTPUT);
+  digitalWrite(Pin_reset, HIGH);
 
-///////////////////////////////////////////////////
+  //set Pressure
+  LPS35HW.begin_I2C();
+
+  // set Wind
+  pinMode(WindSensorPin, INPUT);
+  Rotations = 0;
+
+  ///////////////////////////////////////////////////
 
   // start logging!
   board_manager.start_logging(DURATION_LOGGING_MS);
 }
 
-void loop(){
+void loop() {
 
   wdt_reset();
 
-  #if DEBUG && DEBUG_SLOW
-    SERIAL_DEBUG.println(F("calling loop"));
-  #endif
+#if DEBUG && DEBUG_SLOW
+  SERIAL_DEBUG.println(F("calling loop"));
+#endif
 
   // decide which step in the process at
   int board_status = board_manager.check_status();
 
-  switch(board_status){
+  switch (board_status) {
     case BOARD_LOGGING:
       vn100_manager.perform_logging();
       gps_controller.perform_logging();
@@ -138,41 +176,95 @@ void loop(){
       // close SD card
       sd_manager.close_datafile();
 
- ////////////////
-      digitalWrite(2, HIGH);
-      delay(200);
-      digitalWrite(2,LOW);
+      ////////////////
 
       File dataFile;
       dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
       dataFile.println("start");
 
-      SensorT.init();
-      while (count_ave < 5) {
-      SensorT.read();
-      dataFile.print(millis());
-      dataFile.print(",");
-      dataFile.println(SensorT.temperature());
-      T1=SensorT.temperature();
-      delay(1000);
-      count_ave++;
+      attachInterrupt(digitalPinToInterrupt(WindSensorPin), isr_rotation, FALLING); //initiate wind anemometer count
+      time1 = millis();
+
+      while (count < count_nr) {
+        // take measurements every second (actually only necessary to reduce serial messages...)
+        if (millis() - timer > 1000) {
+          timer = millis();
+
+          //Sensor readings:
+          TCA9548A(0); sensor.init(); sensor.read();
+          T1 = sensor.temperature();
+          dataFile.print(millis());
+          dataFile.print(",");
+          dataFile.print(T1);
+          if (abs(sensor.temperature()) < 50) {
+            T1 = sensor.temperature();
+            T1_ave = T1_ave + T1;
+            T1_count++;
+          }
+          ErrCheck();
+
+          TCA9548A(1); sensor.init(); sensor.read();
+          T2 = sensor.temperature();
+          dataFile.print(",");
+          dataFile.print(T2);
+          if (abs(sensor.temperature()) < 50) {
+            T2 = sensor.temperature();
+            T2_ave = T2_ave + T2;
+            T2_count++;
+          }
+          ErrCheck();
+
+          TCA9548A(2); sensor.init(); sensor.read();
+          T3 = sensor.temperature();
+          dataFile.print(",");
+          dataFile.print(T3);
+          if (abs(sensor.temperature()) < 50) {
+            T3 = sensor.temperature();
+            T3_ave = T3_ave + T3;
+            T3_count++;
+          }
+          ErrCheck();
+
+          TCA9548A(3);
+          P1 = LPS35HW.readPressure();
+          dataFile.print(",");
+          dataFile.print(P1);
+          if (P1 > 800 && P1 < 1100) {
+            P1_ave = P1_ave + P1;
+            P1_count++;
+          }
+          ErrCheck();
+
+          dataFile.print(",");
+          dataFile.println(Rotations);
+
+          count++;
+        }
+        wdt_reset();
       }
-      T1=SensorT.temperature();
-      
+
+      time2 = millis();
+      WindSpeed = Rotations * (2.25 / ((time2 - time1) * 0.001)) * 0.44704;
+      dataFile.print("WindSpeed: "); dataFile.println(WindSpeed);
+
+      dataFile.print(T1_ave / T1_count); dataFile.print(",");
+      dataFile.print(T2_ave / T2_count); dataFile.print(",");
+      dataFile.println(T3_ave / T3_count);
+
       long value_fileIndex = EEPROMReadlong(1);
-      if (value_fileIndex<10){
+      if (value_fileIndex < 10) {
         dataFile.print("F0000");
         dataFile.println(value_fileIndex);
       }
-      else if (value_fileIndex<100){
+      else if (value_fileIndex < 100) {
         dataFile.print("F000");
         dataFile.println(value_fileIndex);
       }
-      else if (value_fileIndex<1000){
+      else if (value_fileIndex < 1000) {
         dataFile.print("F00");
         dataFile.println(value_fileIndex);
       }
-      else if (value_fileIndex<1000){
+      else if (value_fileIndex < 1000) {
         dataFile.print("F0");
         dataFile.println(value_fileIndex);
       }
@@ -182,7 +274,9 @@ void loop(){
       }
       dataFile.close();
 
- ////////////////
+      detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
+
+      ////////////////
 
       // go through Iridium vital messages
       iridium_manager.send_receive_iridium_vital_information();
@@ -200,11 +294,34 @@ void loop(){
 }
 
 // TODO: put in raspberry_manager class
-void perform_raspberry_interaction(void){
+void perform_raspberry_interaction(void) {
   raspberry_manager.start();
   raspberry_manager.send_filename();
   raspberry_manager.file_content_to_raspberry();
   raspberry_manager.receive_processed_data();
   raspberry_manager.transmit_through_iridium();
   // note: crontab gets raspberry to automatically stop
+}
+
+void TCA9548A(uint8_t bus)
+{
+  Wire.beginTransmission(0x70);  // TCA9548A address is 0x70
+  Wire.write(1 << bus);          // send byte to select bus
+  Wire.endTransmission();
+}
+
+void ErrCheck() //Check for errors
+{
+  if (Wire.getWireTimeoutFlag() == 1) {
+    digitalWrite(Pin_reset, LOW);
+    Wire.clearWireTimeoutFlag();
+    digitalWrite(Pin_reset, HIGH);
+  }
+}
+
+void isr_rotation () {
+  if ((millis() - ContactBounceTime) > 15 ) { // debounce the switch contact.
+    Rotations++;
+    ContactBounceTime = millis();
+  }
 }
