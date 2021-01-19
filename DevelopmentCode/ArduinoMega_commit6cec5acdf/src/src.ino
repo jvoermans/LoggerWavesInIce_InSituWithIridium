@@ -251,6 +251,18 @@ void loop() {
       dataFile.print(T2_ave / T2_count); dataFile.print(",");
       dataFile.println(T3_ave / T3_count);
 
+      String sensor_string;
+      //Temperature 1 sensor
+      sensor_string += String{T1_ave / T1_count}; sensor_string += ",";
+      //Temperature 2 sensor
+      sensor_string += String{T2_ave / T2_count}; sensor_string += ",";
+      //Temperature 3 sensor
+      sensor_string += String{T3_ave / T3_count}; sensor_string += ",";
+      //Pressure sensor
+      sensor_string += String{P1_ave / P1_count}; sensor_string += ",";
+      dataFile.print("String: ");
+      dataFile.println(sensor_string);
+
       long value_fileIndex = EEPROMReadlong(1);
       if (value_fileIndex < 10) {
         dataFile.print("F0000");
