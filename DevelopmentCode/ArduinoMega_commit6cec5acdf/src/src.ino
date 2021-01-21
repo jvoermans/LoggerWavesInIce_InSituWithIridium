@@ -182,8 +182,8 @@ void loop() {
       dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
       dataFile.println("start");
 
-      attachInterrupt(digitalPinToInterrupt(WindSensorPin), isr_rotation, FALLING); //initiate wind anemometer count
-      time1 = millis();
+//      attachInterrupt(digitalPinToInterrupt(WindSensorPin), isr_rotation, FALLING); //initiate wind anemometer count
+//      time1 = millis();
 
       while (count < count_nr) {
         // take measurements every second (actually only necessary to reduce serial messages...)
@@ -214,42 +214,54 @@ void loop() {
           }
           ErrCheck();
 
-          TCA9548A(2); sensor.init(); sensor.read();
-          T3 = sensor.temperature();
-          dataFile.print(",");
-          dataFile.print(T3);
-          if (abs(sensor.temperature()) < 50) {
-            T3 = sensor.temperature();
-            T3_ave = T3_ave + T3;
-            T3_count++;
-          }
-          ErrCheck();
+//          TCA9548A(2); sensor.init(); sensor.read();
+//          T3 = sensor.temperature();
+//          dataFile.print(",");
+//          dataFile.print(T3);
+//          if (abs(sensor.temperature()) < 50) {
+//            T3 = sensor.temperature();
+//            T3_ave = T3_ave + T3;
+//            T3_count++;
+//          }
+//          ErrCheck();
 
-          TCA9548A(3);
-          P1 = LPS35HW.readPressure();
-          dataFile.print(",");
-          dataFile.print(P1);
-          if (P1 > 800 && P1 < 1100) {
-            P1_ave = P1_ave + P1;
-            P1_count++;
-          }
-          ErrCheck();
+//          TCA9548A(3);
+//          P1 = LPS35HW.readPressure();
+//          dataFile.print(",");
+//          dataFile.print(P1);
+//          if (P1 > 800 && P1 < 1100) {
+//            P1_ave = P1_ave + P1;
+//            P1_count++;
+//          }
+//          ErrCheck();
 
-          dataFile.print(",");
-          dataFile.println(Rotations);
+          dataFile.println(",");
+//          dataFile.println(Rotations);
 
           count++;
         }
         wdt_reset();
       }
 
-      time2 = millis();
-      WindSpeed = Rotations * (2.25 / ((time2 - time1) * 0.001)) * 0.44704;
-      dataFile.print("WindSpeed: "); dataFile.println(WindSpeed);
+//      time2 = millis();
+//      WindSpeed = Rotations * (2.25 / ((time2 - time1) * 0.001)) * 0.44704;
+//      dataFile.print("WindSpeed: "); dataFile.println(WindSpeed);
 
       dataFile.print(T1_ave / T1_count); dataFile.print(",");
-      dataFile.print(T2_ave / T2_count); dataFile.print(",");
-      dataFile.println(T3_ave / T3_count);
+      dataFile.print(T2_ave / T2_count); dataFile.println(",");
+//      dataFile.println(T3_ave / T3_count);
+
+      String sensor_string;
+      //Temperature 1 sensor
+      sensor_string += String{T1_ave / T1_count}; sensor_string += ",";
+      //Temperature 2 sensor
+      sensor_string += String{T2_ave / T2_count}; sensor_string += ",";
+//      //Temperature 3 sensor
+//      sensor_string += String{T3_ave / T3_count}; sensor_string += ",";
+//      //Pressure sensor
+//      sensor_string += String{P1_ave / P1_count}; sensor_string += ",";
+      dataFile.print("String: ");
+      dataFile.println(sensor_string);
 
       long value_fileIndex = EEPROMReadlong(1);
       if (value_fileIndex < 10) {
@@ -273,6 +285,8 @@ void loop() {
         dataFile.println(value_fileIndex);
       }
       dataFile.close();
+      digitalWrite(Pin_reset, LOW);
+      wdt_reset();
 
       detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
@@ -280,6 +294,10 @@ void loop() {
 
       // go through Iridium vital messages
       iridium_manager.send_receive_iridium_vital_information();
+//      dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
+//      dataFile.println("Iridium done");
+//      dataFile.close();
+      wdt_reset();
 
       // go through Raspberry Pi interaction
       perform_raspberry_interaction();
@@ -319,9 +337,9 @@ void ErrCheck() //Check for errors
   }
 }
 
-void isr_rotation () {
-  if ((millis() - ContactBounceTime) > 15 ) { // debounce the switch contact.
-    Rotations++;
-    ContactBounceTime = millis();
-  }
-}
+//void isr_rotation () {
+//  if ((millis() - ContactBounceTime) > 15 ) { // debounce the switch contact.
+//    Rotations++;
+//    ContactBounceTime = millis();
+//  }
+//}

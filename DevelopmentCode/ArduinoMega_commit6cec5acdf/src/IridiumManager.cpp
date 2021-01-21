@@ -96,11 +96,11 @@ void IridiumManager::send_receive_iridium_vital_information(void)
   // add the information
   IridiumManager::set_battery_message();
   IridiumManager::set_temperature1_message();
-  IridiumManager::set_temperature2_message();
-  IridiumManager::set_temperature3_message();
-  IridiumManager::set_pressure_message();
-  //    IridiumManager::set_wind_message();
-  //    IridiumManager::set_sonar_message();
+//  IridiumManager::set_temperature2_message();
+//  IridiumManager::set_temperature3_message();
+//  IridiumManager::set_pressure_message();
+//    IridiumManager::set_wind_message();
+//    IridiumManager::set_sonar_message();
 //  IridiumManager::set_sensors_message();
   IridiumManager::set_filename_message();
   IridiumManager::set_GPRMC_message();
@@ -138,9 +138,9 @@ void IridiumManager::set_temperature1_message(void) {
 
   // get the message
   extern float T1_ave;
-  extern float T1_count;
+  extern int T1_count;
   String temperature1_string = String{T1_ave / T1_count};
-  temperature1_string += "X";
+//  temperature1_string += "X";
 
   // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
   // add it to the buffer_transmit and update buffer_transmit_position
@@ -149,54 +149,54 @@ void IridiumManager::set_temperature1_message(void) {
     buffer_transmit_position += 1;
   }
 }
-
-void IridiumManager::set_temperature2_message(void) {
-  PDEBMSG("call IridiumManager::set_temperature2_message")
-
-  // get the message
-  extern float T2_ave;
-  extern float T2_count;
-  String temperature2_string = String{T2_ave / T2_count};
-
-  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-  // add it to the buffer_transmit and update buffer_transmit_position
-  for (int i = 0; i < temperature2_string.length() + 1; i++) { // because need the first digit and dot
-    buffer_transmit[buffer_transmit_position] = temperature2_string[i];
-    buffer_transmit_position += 1;
-  }
-}
-
-void IridiumManager::set_temperature3_message(void) {
-  PDEBMSG("call IridiumManager::set_temperature3_message")
-
-  // get the message
-  extern float T3_ave;
-  extern float T3_count;
-  String temperature3_string = String{T3_ave / T3_count};
-
-  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-  // add it to the buffer_transmit and update buffer_transmit_position
-  for (int i = 0; i < temperature3_string.length() + 1; i++) { // because need the first digit and dot
-    buffer_transmit[buffer_transmit_position] = temperature3_string[i];
-    buffer_transmit_position += 1;
-  }
-}
-
-void IridiumManager::set_pressure_message(void) {
-  PDEBMSG("call IridiumManager::set_pressure_message")
-
-  // get the message
-  extern float P1_ave;
-  extern float P1_count;
-  String pressure_string = String{P1_ave / P1_count};
-
-  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-  // add it to the buffer_transmit and update buffer_transmit_position
-  for (int i = 0; i < pressure_string.length() + 1; i++) { // because need the first digit and dot
-    buffer_transmit[buffer_transmit_position] = pressure_string[i];
-    buffer_transmit_position += 1;
-  }
-}
+//
+//void IridiumManager::set_temperature2_message(void) {
+//  PDEBMSG("call IridiumManager::set_temperature2_message")
+//
+//  // get the message
+//  extern float T2_ave;
+//  extern float T2_count;
+//  String temperature2_string = String{T2_ave / T2_count};
+//
+//  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+//  // add it to the buffer_transmit and update buffer_transmit_position
+//  for (int i = 0; i < temperature2_string.length() + 1; i++) { // because need the first digit and dot
+//    buffer_transmit[buffer_transmit_position] = temperature2_string[i];
+//    buffer_transmit_position += 1;
+//  }
+//}
+//
+//void IridiumManager::set_temperature3_message(void) {
+//  PDEBMSG("call IridiumManager::set_temperature3_message")
+//
+//  // get the message
+//  extern float T3_ave;
+//  extern float T3_count;
+//  String temperature3_string = String{T3_ave / T3_count};
+//
+//  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+//  // add it to the buffer_transmit and update buffer_transmit_position
+//  for (int i = 0; i < temperature3_string.length() + 1; i++) { // because need the first digit and dot
+//    buffer_transmit[buffer_transmit_position] = temperature3_string[i];
+//    buffer_transmit_position += 1;
+//  }
+//}
+//
+//void IridiumManager::set_pressure_message(void) {
+//  PDEBMSG("call IridiumManager::set_pressure_message")
+//
+//  // get the message
+//  extern float P1_ave;
+//  extern float P1_count;
+//  String pressure_string = String{P1_ave / P1_count};
+//
+//  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+//  // add it to the buffer_transmit and update buffer_transmit_position
+//  for (int i = 0; i < pressure_string.length() + 1; i++) { // because need the first digit and dot
+//    buffer_transmit[buffer_transmit_position] = pressure_string[i];
+//    buffer_transmit_position += 1;
+//  }
+//}
 
 //void IridiumManager::set_wind_message(void){
 //    PDEBMSG("call IridiumManager::set_wind_message")
@@ -239,22 +239,22 @@ void IridiumManager::set_pressure_message(void) {
 //  // get the message
 //  extern float T1_ave;
 //  extern float T1_count;
-//  extern float T2_ave;
-//  extern float T2_count;
-//  extern float T3_ave;
-//  extern float T3_count;
-//  extern float P1_ave;
-//  extern float P1_count;
+////  extern float T2_ave;
+////  extern float T2_count;
+////  extern float T3_ave;
+////  extern float T3_count;
+////  extern float P1_ave;
+////  extern float P1_count;
 //  String sensor_string;
 //  
 //  //Temperature 1 sensor
 //  sensor_string += String{T1_ave / T1_count}; sensor_string += ",";
-//  //Temperature 2 sensor
-//  sensor_string += String{T2_ave / T2_count}; sensor_string += ",";
-//  //Temperature 3 sensor
-//  sensor_string += String{T3_ave / T3_count}; sensor_string += ",";
-//  //Pressure sensor
-//  sensor_string += String{P1_ave / P1_count}; sensor_string += ",";
+////  //Temperature 2 sensor
+////  sensor_string += String{T2_ave / T2_count}; sensor_string += ",";
+////  //Temperature 3 sensor
+////  sensor_string += String{T3_ave / T3_count}; sensor_string += ",";
+////  //Pressure sensor
+////  sensor_string += String{P1_ave / P1_count};
 //
 //  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
 //  // add it to the buffer_transmit and update buffer_transmit_position
