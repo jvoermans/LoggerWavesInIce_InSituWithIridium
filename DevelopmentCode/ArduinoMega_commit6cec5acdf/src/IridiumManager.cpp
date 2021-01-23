@@ -96,11 +96,11 @@ void IridiumManager::send_receive_iridium_vital_information(void)
   // add the information
   IridiumManager::set_battery_message();
   IridiumManager::set_temperature1_message();
-//  IridiumManager::set_temperature2_message();
-//  IridiumManager::set_temperature3_message();
+  IridiumManager::set_temperature2_message();
+  IridiumManager::set_temperature3_message();
 //  IridiumManager::set_pressure_message();
 //    IridiumManager::set_wind_message();
-//    IridiumManager::set_sonar_message();
+    IridiumManager::set_sonar_message();
 //  IridiumManager::set_sensors_message();
   IridiumManager::set_filename_message();
   IridiumManager::set_GPRMC_message();
@@ -139,8 +139,11 @@ void IridiumManager::set_temperature1_message(void) {
   // get the message
   extern float T1_ave;
   extern int T1_count;
-  String temperature1_string = String{T1_ave / T1_count};
-//  temperature1_string += "X";
+  String temperature1_string = F(",");
+  temperature1_string += String{T1_ave / T1_count};
+  temperature1_string += F(",");
+//  temperature1_string += String{T2_ave / T2_count};
+//temperature1_string += String{S80_ave / S80_count};  
 
   // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
   // add it to the buffer_transmit and update buffer_transmit_position
@@ -149,38 +152,40 @@ void IridiumManager::set_temperature1_message(void) {
     buffer_transmit_position += 1;
   }
 }
-//
-//void IridiumManager::set_temperature2_message(void) {
-//  PDEBMSG("call IridiumManager::set_temperature2_message")
-//
-//  // get the message
-//  extern float T2_ave;
-//  extern float T2_count;
-//  String temperature2_string = String{T2_ave / T2_count};
-//
-//  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-//  // add it to the buffer_transmit and update buffer_transmit_position
-//  for (int i = 0; i < temperature2_string.length() + 1; i++) { // because need the first digit and dot
-//    buffer_transmit[buffer_transmit_position] = temperature2_string[i];
-//    buffer_transmit_position += 1;
-//  }
-//}
-//
-//void IridiumManager::set_temperature3_message(void) {
-//  PDEBMSG("call IridiumManager::set_temperature3_message")
-//
-//  // get the message
-//  extern float T3_ave;
-//  extern float T3_count;
-//  String temperature3_string = String{T3_ave / T3_count};
-//
-//  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-//  // add it to the buffer_transmit and update buffer_transmit_position
-//  for (int i = 0; i < temperature3_string.length() + 1; i++) { // because need the first digit and dot
-//    buffer_transmit[buffer_transmit_position] = temperature3_string[i];
-//    buffer_transmit_position += 1;
-//  }
-//}
+
+void IridiumManager::set_temperature2_message(void) {
+  PDEBMSG("call IridiumManager::set_temperature2_message")
+
+  // get the message
+  extern float T2_ave;
+  extern int T2_count;
+  String temperature2_string = String{T2_ave / T2_count};
+  temperature2_string += F(",");
+
+  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+  // add it to the buffer_transmit and update buffer_transmit_position
+  for (int i = 0; i < temperature2_string.length() + 1; i++) { // because need the first digit and dot
+    buffer_transmit[buffer_transmit_position] = temperature2_string[i];
+    buffer_transmit_position += 1;
+  }
+}
+
+void IridiumManager::set_temperature3_message(void) {
+  PDEBMSG("call IridiumManager::set_temperature3_message")
+
+  // get the message
+  extern float T3_ave;
+  extern int T3_count;
+  String temperature3_string = String{T3_ave / T3_count};
+  temperature3_string += F(",");
+
+  // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+  // add it to the buffer_transmit and update buffer_transmit_position
+  for (int i = 0; i < temperature3_string.length() + 1; i++) { // because need the first digit and dot
+    buffer_transmit[buffer_transmit_position] = temperature3_string[i];
+    buffer_transmit_position += 1;
+  }
+}
 //
 //void IridiumManager::set_pressure_message(void) {
 //  PDEBMSG("call IridiumManager::set_pressure_message")
@@ -214,21 +219,36 @@ void IridiumManager::set_temperature1_message(void) {
 //    }
 //}
 //
-//void IridiumManager::set_sonar_message(void){
-//    PDEBMSG("call IridiumManager::set_sonar_message")
-//
-//    // get the message
-//    extern float T1_ave;
-//    extern float T1_count;
-//    String sonar_string = String{T1_ave / T1_count};
-//
-//    // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
-//    // add it to the buffer_transmit and update buffer_transmit_position
-//    for (int i=0; i < sonar_string.length() + 1; i++){  // because need the first digit and dot
-//        buffer_transmit[buffer_transmit_position] = sonar_string[i];
-//        buffer_transmit_position += 1;
-//    }
-//}
+void IridiumManager::set_sonar_message(void){
+    PDEBMSG("call IridiumManager::set_sonar_message")
+
+    // get the message
+    extern long S80_ave;
+    extern int S80_count;
+    extern long S100_ave;
+    extern int S100_count;
+    extern int Sonar_range;
+    String sonar_string;
+
+    if (Sonar_range == 1) {
+      sonar_string = String{S100_ave / S100_count};
+      sonar_string += F(",1,");
+    }
+    else if (Sonar_range ==2) {
+      sonar_string = String{S80_ave / S80_count};
+      sonar_string += F(",2,");
+    }
+    else if (Sonar_range == 0) {
+      sonar_string = String(F("0,0,"));
+    }
+
+    // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size
+    // add it to the buffer_transmit and update buffer_transmit_position
+    for (int i=0; i < sonar_string.length() + 1; i++){  // because need the first digit and dot
+        buffer_transmit[buffer_transmit_position] = sonar_string[i];
+        buffer_transmit_position += 1;
+    }
+}
 
 //******************************************************
 //Is this equivalent to the above?

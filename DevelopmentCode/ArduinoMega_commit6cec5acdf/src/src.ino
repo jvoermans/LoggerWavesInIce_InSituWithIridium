@@ -83,6 +83,26 @@ volatile unsigned long Rotations; //measurement of nr of anemometer rotations
 volatile unsigned long ContactBounceTime;
 float WindSpeed; //Wind speed measurement
 
+// Sonar ping
+#include "ping1d.h"
+#include "SoftwareSerial.h"
+static const uint8_t arduinoRxPin = 10; //Serial1 rx (white)
+static const uint8_t arduinoTxPin = 11; //Serial1 tx (green)
+SoftwareSerial pingSerial = SoftwareSerial(arduinoRxPin, arduinoTxPin);
+
+static Ping1D ping { pingSerial };
+int count_sonar = 0; //define sonar counter
+long S1; //sonar: distance
+long S2; //sonar: confidence level
+long S80_ave = 0L;
+long S90_ave = 0L;
+long S100_ave = 0L;
+int S80_count = 0;
+int S90_count = 0;
+int S100_count = 0;
+int Sonar_range = 0;
+int Sonar_check;
+
 //////////////////////////////////////////////
 
 // board manager
@@ -143,12 +163,16 @@ void setup() {
   pinMode(Pin_reset, OUTPUT);
   digitalWrite(Pin_reset, HIGH);
 
-  //set Pressure
-  LPS35HW.begin_I2C();
+  // set Sonar
+  pingSerial.begin(9600);
+  ping.set_speed_of_sound(1500000);
+  if (ping.initialize() == true) {
+    Sonar_check = 1;
+  } else {
+    Sonar_check = 0;
+  }
 
-  // set Wind
-  pinMode(WindSensorPin, INPUT);
-  Rotations = 0;
+
 
   ///////////////////////////////////////////////////
 
@@ -180,10 +204,7 @@ void loop() {
 
       File dataFile;
       dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
-      dataFile.println("start");
-
-//      attachInterrupt(digitalPinToInterrupt(WindSensorPin), isr_rotation, FALLING); //initiate wind anemometer count
-//      time1 = millis();
+      dataFile.println(F("start"));
 
       while (count < count_nr) {
         // take measurements every second (actually only necessary to reduce serial messages...)
@@ -194,7 +215,7 @@ void loop() {
           TCA9548A(0); sensor.init(); sensor.read();
           T1 = sensor.temperature();
           dataFile.print(millis());
-          dataFile.print(",");
+          dataFile.print(F(","));
           dataFile.print(T1);
           if (abs(sensor.temperature()) < 50) {
             T1 = sensor.temperature();
@@ -205,7 +226,7 @@ void loop() {
 
           TCA9548A(1); sensor.init(); sensor.read();
           T2 = sensor.temperature();
-          dataFile.print(",");
+          dataFile.print(F(","));
           dataFile.print(T2);
           if (abs(sensor.temperature()) < 50) {
             T2 = sensor.temperature();
@@ -214,74 +235,95 @@ void loop() {
           }
           ErrCheck();
 
-//          TCA9548A(2); sensor.init(); sensor.read();
-//          T3 = sensor.temperature();
-//          dataFile.print(",");
-//          dataFile.print(T3);
-//          if (abs(sensor.temperature()) < 50) {
-//            T3 = sensor.temperature();
-//            T3_ave = T3_ave + T3;
-//            T3_count++;
-//          }
-//          ErrCheck();
-
+          TCA9548A(2); sensor.init(); sensor.read();
+          T3 = sensor.temperature();
+          dataFile.print(F(","));
+          dataFile.print(T3);
+          if (abs(sensor.temperature()) < 50) {
+            T3 = sensor.temperature();
+            T3_ave = T3_ave + T3;
+            T3_count++;
+          }
+          ErrCheck();
+//
 //          TCA9548A(3);
 //          P1 = LPS35HW.readPressure();
-//          dataFile.print(",");
+//          dataFile.print(F(","));
 //          dataFile.print(P1);
-//          if (P1 > 800 && P1 < 1100) {
+//          if (P1 > 700 && P1 < 1200) {
 //            P1_ave = P1_ave + P1;
 //            P1_count++;
 //          }
 //          ErrCheck();
 
-          dataFile.println(",");
-//          dataFile.println(Rotations);
+          dataFile.println(F(","));
 
+          if (Sonar_check == 1) {
+            while (count_sonar < 10) { //count_sonar can't be too big, or GPS will do difficult
+              if (ping.update()) {
+                S1 = ping.distance();
+                S2 = ping.confidence();
+                dataFile.print(S1);
+                dataFile.print(F(","));
+                dataFile.println(S2);
+
+                //Consider only data with confidence level of 80 and higher
+                if (S2 >= 10 && S2 < 40 && S1 < 20000) {
+                  S80_ave = S80_ave + S1;
+                  S80_count++;
+                }
+                if (S2 == 100) {
+                  S100_ave = S100_ave + S1;
+                  S100_count++;
+                }
+              }
+              count_sonar++;
+            }
+            count_sonar = 0;
+          }
           count++;
         }
         wdt_reset();
       }
 
-//      time2 = millis();
-//      WindSpeed = Rotations * (2.25 / ((time2 - time1) * 0.001)) * 0.44704;
-//      dataFile.print("WindSpeed: "); dataFile.println(WindSpeed);
+      dataFile.print(T1_ave / T1_count); dataFile.print(F(","));
+      dataFile.print(T2_ave / T2_count); dataFile.print(F(","));
+      dataFile.print(T3_ave / T3_count); dataFile.println(F(","));
 
-      dataFile.print(T1_ave / T1_count); dataFile.print(",");
-      dataFile.print(T2_ave / T2_count); dataFile.println(",");
-//      dataFile.println(T3_ave / T3_count);
-
-      String sensor_string;
-      //Temperature 1 sensor
-      sensor_string += String{T1_ave / T1_count}; sensor_string += ",";
-      //Temperature 2 sensor
-      sensor_string += String{T2_ave / T2_count}; sensor_string += ",";
-//      //Temperature 3 sensor
-//      sensor_string += String{T3_ave / T3_count}; sensor_string += ",";
-//      //Pressure sensor
-//      sensor_string += String{P1_ave / P1_count}; sensor_string += ",";
-      dataFile.print("String: ");
-      dataFile.println(sensor_string);
+      if (S100_count > 30) {
+        Sonar_range = 1;
+      } else if (S80_count > 5) {
+        Sonar_range = 2;
+      }
+      dataFile.println(Sonar_range);
+      dataFile.println(Sonar_check);
+      if (Sonar_range == 1) {
+        dataFile.println(S100_ave / S100_count);
+      } else if (Sonar_range == 2) {
+        dataFile.println(S80_ave / S80_count);
+      }
+      dataFile.print(S80_ave); dataFile.print(F(" ")); dataFile.println(S80_count);
+      dataFile.print(S100_ave); dataFile.print(F(" ")); dataFile.println(S100_count);
 
       long value_fileIndex = EEPROMReadlong(1);
       if (value_fileIndex < 10) {
-        dataFile.print("F0000");
+        dataFile.print(F("F0000"));
         dataFile.println(value_fileIndex);
       }
       else if (value_fileIndex < 100) {
-        dataFile.print("F000");
+        dataFile.print(F("F000"));
         dataFile.println(value_fileIndex);
       }
       else if (value_fileIndex < 1000) {
-        dataFile.print("F00");
+        dataFile.print(F("F00"));
         dataFile.println(value_fileIndex);
       }
       else if (value_fileIndex < 1000) {
-        dataFile.print("F0");
+        dataFile.print(F("F0"));
         dataFile.println(value_fileIndex);
       }
       else {
-        dataFile.print("F");
+        dataFile.print(F("F"));
         dataFile.println(value_fileIndex);
       }
       dataFile.close();
@@ -294,9 +336,6 @@ void loop() {
 
       // go through Iridium vital messages
       iridium_manager.send_receive_iridium_vital_information();
-//      dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
-//      dataFile.println("Iridium done");
-//      dataFile.close();
       wdt_reset();
 
       // go through Raspberry Pi interaction
