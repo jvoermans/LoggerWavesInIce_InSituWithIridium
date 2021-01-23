@@ -191,6 +191,9 @@ void loop() {
   // decide which step in the process at
   int board_status = board_manager.check_status();
 
+  attachInterrupt(digitalPinToInterrupt(WindSensorPin), isr_rotation, FALLING); //initiate wind anemometer count
+  time1 = millis();
+
   switch (board_status) {
     case BOARD_LOGGING:
       vn100_manager.perform_logging();
@@ -245,16 +248,20 @@ void loop() {
             T3_count++;
           }
           ErrCheck();
-//
-//          TCA9548A(3);
-//          P1 = LPS35HW.readPressure();
-//          dataFile.print(F(","));
-//          dataFile.print(P1);
-//          if (P1 > 700 && P1 < 1200) {
-//            P1_ave = P1_ave + P1;
-//            P1_count++;
-//          }
-//          ErrCheck();
+
+          dataFile.print(F(","));
+          dataFile.print(Rotations);
+          dataFile.print(F(","));
+          //
+          //          TCA9548A(3);
+          //          P1 = LPS35HW.readPressure();
+          //          dataFile.print(F(","));
+          //          dataFile.print(P1);
+          //          if (P1 > 700 && P1 < 1200) {
+          //            P1_ave = P1_ave + P1;
+          //            P1_count++;
+          //          }
+          //          ErrCheck();
 
           dataFile.println(F(","));
 
@@ -326,9 +333,18 @@ void loop() {
         dataFile.print(F("F"));
         dataFile.println(value_fileIndex);
       }
+//      float battery_level_V = board_manager.measure_battery_level();
+      float battery_level_VV =  float(analogRead(PIN_MSR_BATTERY)) * 5.0 / 1024.0;
+//      dataFile.print(F("Voltage"));
+//      dataFile.println(battery_level_V);
+      dataFile.print(F("Voltage"));
+      dataFile.println(battery_level_VV);
       dataFile.close();
       digitalWrite(Pin_reset, LOW);
+
+
       wdt_reset();
+
 
       detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
@@ -376,9 +392,9 @@ void ErrCheck() //Check for errors
   }
 }
 
-//void isr_rotation () {
-//  if ((millis() - ContactBounceTime) > 15 ) { // debounce the switch contact.
-//    Rotations++;
-//    ContactBounceTime = millis();
-//  }
-//}
+void isr_rotation () {
+  if ((millis() - ContactBounceTime) > 15 ) { // debounce the switch contact.
+    Rotations++;
+    ContactBounceTime = millis();
+  }
+}
