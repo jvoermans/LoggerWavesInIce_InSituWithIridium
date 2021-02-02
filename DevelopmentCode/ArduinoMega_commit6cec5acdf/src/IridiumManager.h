@@ -72,9 +72,8 @@ private:
     void set_temperature1_message(void);
     void set_temperature2_message(void);
     void set_temperature3_message(void);
-//    void set_pressure_message(void);
-//    void set_sensors_message(void);
-//    void set_wind_message(void);
+    void set_pressure_message(void);
+    void set_wind_message(void);
     void set_sonar_message(void);
 
     /*

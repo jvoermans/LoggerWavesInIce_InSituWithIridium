@@ -53,7 +53,7 @@ uint32_t timer = millis();
 int count = 0; //define counter
 
 static const uint8_t Pin_reset = 3; //TCA9548A reset pin
-const int count_nr = 30; //Number of sensor measurements
+const int count_nr = 120; //Number of sensor measurements
 
 // Temperature sensors
 #include "TSYS01.h"
@@ -92,8 +92,8 @@ SoftwareSerial pingSerial = SoftwareSerial(arduinoRxPin, arduinoTxPin);
 
 static Ping1D ping { pingSerial };
 int count_sonar = 0; //define sonar counter
-long S1; //sonar: distance
-long S2; //sonar: confidence level
+int S1; //sonar: distance
+int S2; //sonar: confidence level
 long S80_ave = 0L;
 long S90_ave = 0L;
 long S100_ave = 0L;
@@ -172,6 +172,8 @@ void setup() {
     Sonar_check = 0;
   }
 
+  //set Pressure
+  LPS35HW.begin_I2C();
 
 
   ///////////////////////////////////////////////////
@@ -202,6 +204,10 @@ void loop() {
     case BOARD_DONE_LOGGING:
       // close SD card
       sd_manager.close_datafile();
+
+      time2 = millis();
+      WindSpeed = Rotations * (2.25 / ((25*60))) * 0.44704;
+      detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
       ////////////////
 
@@ -249,19 +255,19 @@ void loop() {
           }
           ErrCheck();
 
+          TCA9548A(3);
+          P1 = LPS35HW.readPressure();
+          dataFile.print(F(","));
+          dataFile.print(P1);
+          if (P1 > 700 && P1 < 1200) {
+            P1_ave = P1_ave + P1;
+            P1_count++;
+          }
+          ErrCheck();
+
           dataFile.print(F(","));
           dataFile.print(Rotations);
           dataFile.print(F(","));
-          //
-          //          TCA9548A(3);
-          //          P1 = LPS35HW.readPressure();
-          //          dataFile.print(F(","));
-          //          dataFile.print(P1);
-          //          if (P1 > 700 && P1 < 1200) {
-          //            P1_ave = P1_ave + P1;
-          //            P1_count++;
-          //          }
-          //          ErrCheck();
 
           dataFile.println(F(","));
 
@@ -296,6 +302,11 @@ void loop() {
       dataFile.print(T1_ave / T1_count); dataFile.print(F(","));
       dataFile.print(T2_ave / T2_count); dataFile.print(F(","));
       dataFile.print(T3_ave / T3_count); dataFile.println(F(","));
+
+      dataFile.print(F("Rotations"));dataFile.println(Rotations);
+      dataFile.print(F("time1"));dataFile.println(time1);
+      dataFile.print(F("time2"));dataFile.println(time2);
+      dataFile.print(F("Rotations"));dataFile.println(WindSpeed);
 
       if (S100_count > 30) {
         Sonar_range = 1;
@@ -333,20 +344,14 @@ void loop() {
         dataFile.print(F("F"));
         dataFile.println(value_fileIndex);
       }
-//      float battery_level_V = board_manager.measure_battery_level();
       float battery_level_VV =  float(analogRead(PIN_MSR_BATTERY)) * 5.0 / 1024.0;
-//      dataFile.print(F("Voltage"));
-//      dataFile.println(battery_level_V);
       dataFile.print(F("Voltage"));
       dataFile.println(battery_level_VV);
       dataFile.close();
       digitalWrite(Pin_reset, LOW);
 
-
       wdt_reset();
 
-
-      detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
       //////////////////
 
