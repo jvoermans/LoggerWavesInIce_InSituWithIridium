@@ -192,7 +192,11 @@ void IridiumManager::set_pressure_message(void) {
   // get the message
   extern float P1_ave;
   extern int P1_count;
+  extern float P1T_ave;
+  extern int P1T_count;
   String pressure_string = String{P1_ave / P1_count};
+  pressure_string += F(",");
+  pressure_string += String{P1T_ave / P1T_count};
   pressure_string += F(",");
 
   // TODO: can optimize a bit the transmission: transmit something more efficient and reduce Iridium message size

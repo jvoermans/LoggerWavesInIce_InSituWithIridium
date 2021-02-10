@@ -53,7 +53,7 @@ uint32_t timer = millis();
 int count = 0; //define counter
 
 static const uint8_t Pin_reset = 3; //TCA9548A reset pin
-const int count_nr = 120; //Number of sensor measurements
+const int count_nr = 90; //Number of sensor measurements
 
 // Temperature sensors
 #include "TSYS01.h"
@@ -74,6 +74,9 @@ Adafruit_LPS35HW LPS35HW = Adafruit_LPS35HW();
 float P1;
 float P1_ave;
 int P1_count;
+float P1T;
+float P1T_ave;
+int P1T_count;
 
 // Wind anemometer
 #define WindSensorPin (2) //define pin of wind sensor
@@ -206,14 +209,10 @@ void loop() {
       sd_manager.close_datafile();
 
       time2 = millis();
-      WindSpeed = Rotations * (2.25 / ((25*60))) * 0.44704;
+      WindSpeed = Rotations * (2.25 / ((25 * 60))) * 0.44704;
       detachInterrupt(digitalPinToInterrupt(WindSensorPin)); //close wind anemometer count
 
       ////////////////
-
-      File dataFile;
-      dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
-      dataFile.println(F("start"));
 
       while (count < count_nr) {
         // take measurements every second (actually only necessary to reduce serial messages...)
@@ -223,9 +222,9 @@ void loop() {
           //Sensor readings:
           TCA9548A(0); sensor.init(); sensor.read();
           T1 = sensor.temperature();
-          dataFile.print(millis());
-          dataFile.print(F(","));
-          dataFile.print(T1);
+//          dataFile.print(millis());
+//          dataFile.print(F(","));
+//          dataFile.print(T1);
           if (abs(sensor.temperature()) < 50) {
             T1 = sensor.temperature();
             T1_ave = T1_ave + T1;
@@ -235,8 +234,8 @@ void loop() {
 
           TCA9548A(1); sensor.init(); sensor.read();
           T2 = sensor.temperature();
-          dataFile.print(F(","));
-          dataFile.print(T2);
+//          dataFile.print(F(","));
+//          dataFile.print(T2);
           if (abs(sensor.temperature()) < 50) {
             T2 = sensor.temperature();
             T2_ave = T2_ave + T2;
@@ -246,8 +245,8 @@ void loop() {
 
           TCA9548A(2); sensor.init(); sensor.read();
           T3 = sensor.temperature();
-          dataFile.print(F(","));
-          dataFile.print(T3);
+//          dataFile.print(F(","));
+//          dataFile.print(T3);
           if (abs(sensor.temperature()) < 50) {
             T3 = sensor.temperature();
             T3_ave = T3_ave + T3;
@@ -257,35 +256,40 @@ void loop() {
 
           TCA9548A(3);
           P1 = LPS35HW.readPressure();
-          dataFile.print(F(","));
-          dataFile.print(P1);
+          P1T = LPS35HW.readTemperature();
+//          dataFile.print(F(","));
+//          dataFile.print(P1);
           if (P1 > 700 && P1 < 1200) {
             P1_ave = P1_ave + P1;
             P1_count++;
           }
+          if (abs(P1T) < 50) {
+            P1T_ave = P1T_ave + P1T;
+            P1T_count++;
+          }
           ErrCheck();
 
-          dataFile.print(F(","));
-          dataFile.print(Rotations);
-          dataFile.print(F(","));
+//          dataFile.print(F(","));
+//          dataFile.print(Rotations);
+//          dataFile.print(F(","));
 
-          dataFile.println(F(","));
+//          dataFile.println(F(","));
 
           if (Sonar_check == 1) {
             while (count_sonar < 10) { //count_sonar can't be too big, or GPS will do difficult
               if (ping.update()) {
                 S1 = ping.distance();
                 S2 = ping.confidence();
-                dataFile.print(S1);
-                dataFile.print(F(","));
-                dataFile.println(S2);
+//                dataFile.print(S1);
+//                dataFile.print(F(","));
+//                dataFile.println(S2);
 
                 //Consider only data with confidence level of 80 and higher
-                if (S2 >= 10 && S2 < 40 && S1 < 20000) {
+                if (S2 >= 80 && S2 < 100 && S1 < 10000 && S1 > 0) {
                   S80_ave = S80_ave + S1;
                   S80_count++;
                 }
-                if (S2 == 100) {
+                if (S2 == 100 && S1 < 10000 && S1 > 0) {
                   S100_ave = S100_ave + S1;
                   S100_count++;
                 }
@@ -299,29 +303,31 @@ void loop() {
         wdt_reset();
       }
 
+      File dataFile;
+      dataFile = SD.open("DATAFILE.txt", FILE_WRITE);
+      dataFile.println(F("start"));
+
       dataFile.print(T1_ave / T1_count); dataFile.print(F(","));
       dataFile.print(T2_ave / T2_count); dataFile.print(F(","));
-      dataFile.print(T3_ave / T3_count); dataFile.println(F(","));
-
-      dataFile.print(F("Rotations"));dataFile.println(Rotations);
-      dataFile.print(F("time1"));dataFile.println(time1);
-      dataFile.print(F("time2"));dataFile.println(time2);
-      dataFile.print(F("Rotations"));dataFile.println(WindSpeed);
+      dataFile.print(T3_ave / T3_count); dataFile.print(F(","));
+      dataFile.print(P1_ave / P1_count); dataFile.print(F(","));
+      dataFile.print(P1T_ave / P1T_count); dataFile.print(F(","));
+      dataFile.print(WindSpeed); dataFile.println(F(","));
 
       if (S100_count > 30) {
         Sonar_range = 1;
       } else if (S80_count > 5) {
         Sonar_range = 2;
       }
-      dataFile.println(Sonar_range);
-      dataFile.println(Sonar_check);
+//      dataFile.println(Sonar_range);
+//      dataFile.println(Sonar_check);
       if (Sonar_range == 1) {
-        dataFile.println(S100_ave / S100_count);
+        dataFile.print(S100_ave / S100_count);dataFile.println(F(" S100"));
       } else if (Sonar_range == 2) {
-        dataFile.println(S80_ave / S80_count);
+        dataFile.print(S80_ave / S80_count);dataFile.println(F(" S80"));
       }
-      dataFile.print(S80_ave); dataFile.print(F(" ")); dataFile.println(S80_count);
-      dataFile.print(S100_ave); dataFile.print(F(" ")); dataFile.println(S100_count);
+//      dataFile.print(S80_ave); dataFile.print(F(" ")); dataFile.println(S80_count);
+//      dataFile.print(S100_ave); dataFile.print(F(" ")); dataFile.println(S100_count);
 
       long value_fileIndex = EEPROMReadlong(1);
       if (value_fileIndex < 10) {
@@ -345,8 +351,9 @@ void loop() {
         dataFile.println(value_fileIndex);
       }
       float battery_level_VV =  float(analogRead(PIN_MSR_BATTERY)) * 5.0 / 1024.0;
-      dataFile.print(F("Voltage"));
+//      dataFile.print(F("Voltage"));
       dataFile.println(battery_level_VV);
+      dataFile.println(" ");
       dataFile.close();
       digitalWrite(Pin_reset, LOW);
 
