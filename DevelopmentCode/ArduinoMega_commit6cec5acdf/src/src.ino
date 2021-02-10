@@ -69,8 +69,12 @@ int T2_count = 0;
 int T3_count = 0;
 
 // Pressure sensor
-#include <Adafruit_LPS35HW.h>
-Adafruit_LPS35HW LPS35HW = Adafruit_LPS35HW();
+#include <Adafruit_Sensor.h>
+#include "Adafruit_BMP3XX.h"
+Adafruit_BMP3XX bmp;
+
+//#include <Adafruit_LPS35HW.h>
+//Adafruit_LPS35HW LPS35HW = Adafruit_LPS35HW();
 float P1;
 float P1_ave;
 int P1_count;
@@ -176,7 +180,12 @@ void setup() {
   }
 
   //set Pressure
-  LPS35HW.begin_I2C();
+  bmp.begin_I2C();
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+//  LPS35HW.begin_I2C();
 
 
   ///////////////////////////////////////////////////
@@ -255,8 +264,9 @@ void loop() {
           ErrCheck();
 
           TCA9548A(3);
-          P1 = LPS35HW.readPressure();
-          P1T = LPS35HW.readTemperature();
+          bmp.performReading();
+          P1 = bmp.pressure / 100.0;
+          P1T = bmp.temperature;
 //          dataFile.print(F(","));
 //          dataFile.print(P1);
           if (P1 > 700 && P1 < 1200) {
